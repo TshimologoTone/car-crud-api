@@ -24,6 +24,8 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
+            width: 100%;
+            max-width: 600px;
         }
 
         button {
@@ -49,19 +51,105 @@
             font-size: 18px;
             margin-top: 20px;
         }
+
+        .car-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .car-item {
+            background-color: #fff;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .car-item button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="container" x-data="carApp()">
         <h1>Car CRUD API Application</h1>
-        <button @click="fetchMostPopularCarMake">Get Most Popular Car Make</button>
+        <button @click="toggleCarList">Car List</button>
+        <div class="car-list" x-show="showCarList">
+            <template x-for="car in cars" :key="car.reg_number">
+                <div class="car-item">
+                    <div>
+                        <strong x-text="`${car.make} ${car.model}`"></strong>
+                        <span x-text="`(${car.color}) - ${car.reg_number}`"></span>
+                    </div>
+                    <div>
+                        <button @click="deleteCar(car.reg_number)">Delete</button>
+                        <button @click="updateCar(car)">Update</button>
+                    </div>
+                </div>
+            </template>
+        </div>
         <p x-text="mostPopularMake"></p>
+        <button @click="fetchMostPopularCarMake">Get Most Popular Car Make</button>
     </div>
 
     <script>
         function carApp() {
             return {
+                cars: [],
                 mostPopularMake: '',
+                showCarList: false,
+
+                fetchCars() {
+                    axios.get('http://localhost:5000/api/cars')
+                        .then(response => {
+                            this.cars = response.data;
+                        })
+                        .catch(error => {
+                            console.error('There was an error fetching the car list!', error);
+                        });
+                },
+
+                toggleCarList() {
+                    this.showCarList = !this.showCarList;
+                    if (this.showCarList && this.cars.length === 0) {
+                        this.fetchCars();
+                    }
+                },
+
+                deleteCar(regNumber) {
+                    axios.delete(`http://localhost:5000/api/cars/${regNumber}`)
+                        .then(response => {
+                            this.cars = this.cars.filter(car => car.reg_number !== regNumber);
+                        })
+                        .catch(error => {
+                            console.error('There was an error deleting the car!', error);
+                        });
+                },
+
+                updateCar(car) {
+                    const newMake = prompt("Enter new make", car.make);
+                    const newModel = prompt("Enter new model", car.model);
+                    const newColor = prompt("Enter new color", car.color);
+
+                    if (newMake && newModel && newColor) {
+                        axios.put(`http://localhost:5000/api/cars/${car.reg_number}`, {
+                            make: newMake,
+                            model: newModel,
+                            color: newColor
+                        })
+                        .then(response => {
+                            this.fetchCars(); // Refresh the car list
+                        })
+                        .catch(error => {
+                            console.error('There was an error updating the car!', error);
+                        });
+                    }
+                },
+
                 fetchMostPopularCarMake() {
                     axios.get('http://localhost:5000/api/mostPopularCar')
                         .then(response => {
